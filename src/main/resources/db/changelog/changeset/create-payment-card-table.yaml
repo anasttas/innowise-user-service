@@ -1,0 +1,28 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: create-payment-cards-table
+      author: Kharlamova
+      changes:
+        - sql:
+            splitStatements: true
+            endDelimiter: ;
+            sql: |
+              CREATE TABLE payment_cards (
+                  id SERIAL PRIMARY KEY,
+                  user_id BIGINT NOT NULL,
+                  number VARCHAR(16) NOT NULL UNIQUE,
+                  holder VARCHAR(255) NOT NULL,
+                  expiration_date DATE NOT NULL,
+                  active BOOLEAN NOT NULL,
+                  created_at TIMESTAMP,
+                  updated_at TIMESTAMP,
+
+                  CONSTRAINT fk_payment_cards_user
+                  FOREIGN KEY (user_id)
+                  REFERENCES users(id)
+                  ON DELETE CASCADE
+              );
+
+              CREATE INDEX idx_card_number
+              ON payment_cards(number);

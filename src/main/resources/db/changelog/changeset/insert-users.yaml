@@ -1,0 +1,49 @@
+databaseChangeLog:
+  - changeSet:
+      id: insert-users
+      author: Kharlamova
+      changes:
+        - sql:
+            endDelimiter: ;
+            sql: |
+              insert into users (
+                  id,
+                  name,
+                  surname,
+                  email,
+                  birth_date,
+                  active,
+                  created_at,
+                  updated_at
+              )
+              values (
+                  1,
+                  'Anna',
+                  'Ivanova',
+                  'anna.ivanova@gmail.com',
+                  '2000-05-15',
+                  true,
+                  now(),
+                  now()
+              );
+              
+              insert into users (
+                  id,
+                  name,
+                  surname,
+                  email,
+                  birth_date,
+                  active,
+                  created_at,
+                  updated_at
+              )
+              values (
+                  2,
+                  'Ivan',
+                  'Ivanov',
+                  'ivan.ivanova@gmail.com',
+                  '2005-03-27',
+                  true,
+                  now(),
+                  now()
+              );

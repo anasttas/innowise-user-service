@@ -11,6 +11,9 @@ import com.kharlamova.user_service.service.UserService;
 import com.kharlamova.user_service.specification.UserSpecification;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -24,6 +27,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
 
     @Override
+    @Cacheable(value = "users", key = "#id")
     public UserDto getUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
@@ -60,6 +64,7 @@ public class UserServiceImpl implements UserService {
 
     @Transactional
     @Override
+    @CachePut(value = "users", key = "#id")
     public UserDto updateUser(Long id, UserDto userDto) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
@@ -76,6 +81,7 @@ public class UserServiceImpl implements UserService {
 
     @Transactional
     @Override
+    @CachePut(value = "users", key = "#id")
     public UserDto activateUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
@@ -87,7 +93,9 @@ public class UserServiceImpl implements UserService {
         return UserMapper.makeUserDto(user);
     }
 
+    @Transactional
     @Override
+    @CachePut(value = "users", key = "#id")
     public UserDto deactivateUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
@@ -100,6 +108,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @CacheEvict(value = "users", key = "#id")
     public AskDto deleteUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));

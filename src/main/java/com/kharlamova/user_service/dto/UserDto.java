@@ -3,6 +3,7 @@ package com.kharlamova.user_service.dto;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
+import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -10,7 +11,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class UserDto {
+public class UserDto implements Serializable {
     private Long id;
 
     @NotBlank(message = "Email should not be blank")

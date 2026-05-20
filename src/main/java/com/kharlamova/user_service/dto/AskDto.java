@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 public class AskDto {
-
     boolean answer;
 
     public static AskDto makeDefault(boolean answer){

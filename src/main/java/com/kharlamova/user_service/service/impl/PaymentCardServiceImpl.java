@@ -15,6 +15,9 @@ import com.kharlamova.user_service.service.PaymentCardService;
 import com.kharlamova.user_service.specification.PaymentCardSpecification;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -29,6 +32,7 @@ public class PaymentCardServiceImpl implements PaymentCardService {
 
     private final UserRepository userRepository;
 
+    @Cacheable(value = "cards", key = "#id")
     @Override
     public PaymentCardDto getPaymentCard(Long id) {
         PaymentCard paymentCard = paymentCardRepository.findById(id)
@@ -72,6 +76,7 @@ public class PaymentCardServiceImpl implements PaymentCardService {
 
     @Transactional
     @Override
+    @CachePut(value = "cards", key = "#id")
     public PaymentCardDto updatePaymentCard(Long id, PaymentCardDto paymentCardDto) {
         PaymentCard paymentCard = paymentCardRepository.findById(id)
                 .orElseThrow(() -> new PaymentCardNotFoundException("Payment card not found"));
@@ -91,6 +96,7 @@ public class PaymentCardServiceImpl implements PaymentCardService {
 
     @Transactional
     @Override
+    @CachePut(value = "cards", key = "#id")
     public PaymentCardDto activatePaymentCard(Long id) {
         PaymentCard paymentCard = paymentCardRepository.findById(id)
                 .orElseThrow(() -> new PaymentCardNotFoundException("Payment card not found"));
@@ -104,6 +110,7 @@ public class PaymentCardServiceImpl implements PaymentCardService {
 
     @Transactional
     @Override
+    @CachePut(value = "cards", key = "#id")
     public PaymentCardDto deactivatePaymentCard(Long id) {
         PaymentCard paymentCard = paymentCardRepository.findById(id)
                 .orElseThrow(() -> new PaymentCardNotFoundException("Payment card not found"));
@@ -117,6 +124,7 @@ public class PaymentCardServiceImpl implements PaymentCardService {
 
     @Transactional
     @Override
+    @CacheEvict(value = "cards", key = "#id")
     public AskDto deletePaymentCard(Long id) {
         PaymentCard paymentCard = paymentCardRepository.findById(id)
                 .orElseThrow(() -> new PaymentCardNotFoundException("Payment card not found"));

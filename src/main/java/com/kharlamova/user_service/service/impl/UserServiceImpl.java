@@ -3,6 +3,8 @@ package com.kharlamova.user_service.service.impl;
 import com.kharlamova.user_service.dto.AskDto;
 import com.kharlamova.user_service.dto.UserDto;
 import com.kharlamova.user_service.entity.User;
+import com.kharlamova.user_service.exceptions.UserAlreadyExistsException;
+import com.kharlamova.user_service.exceptions.UserNotFoundException;
 import com.kharlamova.user_service.mapper.UserMapper;
 import com.kharlamova.user_service.repository.UserRepository;
 import com.kharlamova.user_service.service.UserService;
@@ -24,7 +26,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDto getUser(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         return UserMapper.makeUserDto(user);
     }
@@ -43,7 +45,7 @@ public class UserServiceImpl implements UserService {
     public UserDto createUser(UserDto userDto) {
         userRepository.findUserByEmail(userDto.getEmail())
             .ifPresent(foundUser -> {
-                throw new RuntimeException("User already exists");
+                throw new UserAlreadyExistsException("User already exists");
             });
 
         User user = UserMapper.makeUser(userDto);
@@ -60,7 +62,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDto updateUser(Long id, UserDto userDto) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         user.setName(userDto.getName());
         user.setSurname(userDto.getSurname());
@@ -76,7 +78,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDto activateUser(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         user.setActive(true);
 
@@ -88,7 +90,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDto deactivateUser(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         user.setActive(false);
 
@@ -100,7 +102,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public AskDto deleteUser(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         userRepository.deleteById(id);
 

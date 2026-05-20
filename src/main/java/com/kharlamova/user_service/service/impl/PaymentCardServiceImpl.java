@@ -4,6 +4,10 @@ import com.kharlamova.user_service.dto.AskDto;
 import com.kharlamova.user_service.dto.PaymentCardDto;
 import com.kharlamova.user_service.entity.PaymentCard;
 import com.kharlamova.user_service.entity.User;
+import com.kharlamova.user_service.exceptions.CardLimitException;
+import com.kharlamova.user_service.exceptions.PaymentCardAlreadyExistsException;
+import com.kharlamova.user_service.exceptions.PaymentCardNotFoundException;
+import com.kharlamova.user_service.exceptions.UserNotFoundException;
 import com.kharlamova.user_service.mapper.PaymentCardMapper;
 import com.kharlamova.user_service.repository.PaymentCardRepository;
 import com.kharlamova.user_service.repository.UserRepository;
@@ -28,7 +32,7 @@ public class PaymentCardServiceImpl implements PaymentCardService {
     @Override
     public PaymentCardDto getPaymentCard(Long id) {
         PaymentCard paymentCard = paymentCardRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Payment card not found"));
+                .orElseThrow(() -> new PaymentCardNotFoundException("Payment card not found"));
 
         return PaymentCardMapper.makePaymentCardDto(paymentCard);
     }
@@ -46,14 +50,14 @@ public class PaymentCardServiceImpl implements PaymentCardService {
     public PaymentCardDto createPaymentCard(PaymentCardDto paymentCardDto) {
         paymentCardRepository.findUserByNumber(paymentCardDto.getNumber())
                 .ifPresent(foundPaymentCard -> {
-                    throw new RuntimeException("Payment card already exists");
+                    throw new PaymentCardAlreadyExistsException("Payment card already exists");
                 });
 
         User user = userRepository.findById(paymentCardDto.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         if (user.getPaymentCards().size() >= 5) {
-            throw new RuntimeException("User cannot have more than 5 payment cards");
+            throw new CardLimitException("User cannot have more than 5 payment cards");
         }
 
         PaymentCard paymentCard = PaymentCardMapper.makePaymentCard(paymentCardDto, user);
@@ -70,10 +74,10 @@ public class PaymentCardServiceImpl implements PaymentCardService {
     @Override
     public PaymentCardDto updatePaymentCard(Long id, PaymentCardDto paymentCardDto) {
         PaymentCard paymentCard = paymentCardRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Payment card not found"));
+                .orElseThrow(() -> new PaymentCardNotFoundException("Payment card not found"));
 
         User user = userRepository.findById(paymentCardDto.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         paymentCard.setHolder(paymentCardDto.getHolder());
         paymentCard.setUser(user);
@@ -89,7 +93,7 @@ public class PaymentCardServiceImpl implements PaymentCardService {
     @Override
     public PaymentCardDto activatePaymentCard(Long id) {
         PaymentCard paymentCard = paymentCardRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Payment card not found"));
+                .orElseThrow(() -> new PaymentCardNotFoundException("Payment card not found"));
 
         paymentCard.setActive(true);
 
@@ -102,7 +106,7 @@ public class PaymentCardServiceImpl implements PaymentCardService {
     @Override
     public PaymentCardDto deactivatePaymentCard(Long id) {
         PaymentCard paymentCard = paymentCardRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Payment card not found"));
+                .orElseThrow(() -> new PaymentCardNotFoundException("Payment card not found"));
 
         paymentCard.setActive(false);
 
@@ -115,7 +119,7 @@ public class PaymentCardServiceImpl implements PaymentCardService {
     @Override
     public AskDto deletePaymentCard(Long id) {
         PaymentCard paymentCard = paymentCardRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Payment card not found"));
+                .orElseThrow(() -> new PaymentCardNotFoundException("Payment card not found"));
 
         paymentCardRepository.deleteById(id);
 

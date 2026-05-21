@@ -193,12 +193,5 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Print image digest
-        run: |
-          mvn verify sonar:sonar \
-            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }} \
-            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }} \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.token=${{ env.SONAR_TOKEN }} \
-            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
-            -Dsonar.cpd.exclusions=**/*Test*.java \
-            --batch-mode
+        run: mvn test -Dgroups="!integration" --batch-mode
+

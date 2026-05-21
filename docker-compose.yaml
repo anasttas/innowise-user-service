@@ -1,0 +1,27 @@
+services:
+
+  redis:
+    image: redis:8.2.1
+    ports:
+      - "6379:6379"
+
+  db:
+    image: postgres:16
+    container_name: db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+
+  user-service:
+    build: .
+    container_name: user-service
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+      - redis
+    env_file:
+      - .env.docker

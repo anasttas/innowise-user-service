@@ -46,10 +46,8 @@ class PaymentCardIntegrationTest {
 
     @BeforeEach
     void cleanDb() {
-        paymentCardRepository.deleteAll();
-        userRepository.deleteAll();
-        jdbcTemplate.execute("ALTER SEQUENCE users_id_seq RESTART WITH 1");
-        jdbcTemplate.execute("ALTER SEQUENCE payment_cards_id_seq RESTART WITH 1");
+        jdbcTemplate.execute("TRUNCATE TABLE payment_cards RESTART IDENTITY CASCADE");
+        jdbcTemplate.execute("TRUNCATE TABLE users RESTART IDENTITY CASCADE");
     }
 
     @Test

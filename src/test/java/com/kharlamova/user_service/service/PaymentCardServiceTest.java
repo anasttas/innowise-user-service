@@ -1,10 +1,10 @@
 package com.kharlamova.user_service.service;
 
 import com.kharlamova.user_service.dto.PaymentCardDto;
-import com.kharlamova.user_service.dto.AskDto;
 import com.kharlamova.user_service.entity.PaymentCard;
 import com.kharlamova.user_service.entity.User;
 import com.kharlamova.user_service.exceptions.PaymentCardNotFoundException;
+import com.kharlamova.user_service.mapper.PaymentCardMapper;
 import com.kharlamova.user_service.repository.PaymentCardRepository;
 import com.kharlamova.user_service.repository.UserRepository;
 import com.kharlamova.user_service.service.impl.PaymentCardServiceImpl;
@@ -13,8 +13,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.time.LocalDate;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -22,7 +20,6 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class PaymentCardServiceTest {
-
     @Mock
     private PaymentCardRepository paymentCardRepository;
 
@@ -32,9 +29,13 @@ public class PaymentCardServiceTest {
     @InjectMocks
     private PaymentCardServiceImpl paymentCardService;
 
+    @Mock
+    private PaymentCardMapper paymentCardMapper;
+
     @Test
     void getPaymentCard_shouldReturnPaymentCardDto() {
         User user = new User();
+
         user.setId(1L);
 
         PaymentCard card = new PaymentCard();
@@ -46,9 +47,16 @@ public class PaymentCardServiceTest {
         when(paymentCardRepository.findById(1L))
                 .thenReturn(Optional.of(card));
 
+        PaymentCardDto dto = new PaymentCardDto();
+        dto.setHolder("IVAN IVANOV");
+
+        when(paymentCardMapper.makePaymentCardDto(card))
+                .thenReturn(dto);
+
         PaymentCardDto result = paymentCardService.getPaymentCard(1L);
 
         assertNotNull(result);
+
         assertEquals("IVAN IVANOV", result.getHolder());
 
         verify(paymentCardRepository, times(1))
@@ -93,6 +101,12 @@ public class PaymentCardServiceTest {
         when(paymentCardRepository.save(any(PaymentCard.class)))
                 .thenReturn(card);
 
+        PaymentCardDto resultDto = new PaymentCardDto();
+        resultDto.setHolder("New");
+
+        when(paymentCardMapper.makePaymentCardDto(card))
+                .thenReturn(resultDto);
+
         PaymentCardDto result = paymentCardService.updatePaymentCard(1L, dto);
 
         assertEquals("New", result.getHolder());
@@ -111,6 +125,12 @@ public class PaymentCardServiceTest {
         card.setId(1L);
         card.setActive(false);
         card.setUser(user);
+
+        PaymentCardDto dto = new PaymentCardDto();
+        dto.setActive(true);
+
+        when(paymentCardMapper.makePaymentCardDto(card))
+                .thenReturn(dto);
 
         when(paymentCardRepository.findById(1L))
                 .thenReturn(Optional.of(card));
@@ -136,6 +156,12 @@ public class PaymentCardServiceTest {
         card.setId(1L);
         card.setActive(true);
         card.setUser(user);
+
+        PaymentCardDto dto = new PaymentCardDto();
+        dto.setActive(false);
+
+        when(paymentCardMapper.makePaymentCardDto(card))
+                .thenReturn(dto);
 
         when(paymentCardRepository.findById(1L))
                 .thenReturn(Optional.of(card));

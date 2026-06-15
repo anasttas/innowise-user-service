@@ -19,4 +19,6 @@ public interface UserService {
     UserDto deactivateUser(Long id);
 
     AskDto deleteUser(Long id);
+
+    UserDto getUserByEmail(String email);
 }

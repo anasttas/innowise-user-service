@@ -19,12 +19,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
+
+    private final UserMapper userMapper;
 
     @Override
     @Cacheable(value = "users", key = "#id")
@@ -32,7 +32,16 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        return UserMapper.makeUserDto(user);
+        return userMapper.makeUserDto(user);
+    }
+
+    @Override
+    @Cacheable(value = "users", key = "#email")
+    public UserDto getUserByEmail(String email) {
+        User user = userRepository.findUserByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        return userMapper.makeUserDto(user);
     }
 
     @Override
@@ -42,7 +51,7 @@ public class UserServiceImpl implements UserService {
                 .and(UserSpecification.hasSurnameLike(surname));
 
         return userRepository.findAll(specification, pageable)
-                .map(UserMapper::makeUserDto);
+                .map(userMapper::makeUserDto);
     }
 
     @Override
@@ -52,14 +61,13 @@ public class UserServiceImpl implements UserService {
                 throw new UserAlreadyExistsException("User already exists");
             });
 
-        User user = UserMapper.makeUser(userDto);
+        User user = userMapper.makeUser(userDto);
 
-        user.setCreatedAt(LocalDateTime.now());
-        user.setUpdatedAt(LocalDateTime.now());
+        user.setActive(true);
 
         userRepository.save(user);
 
-        return UserMapper.makeUserDto(user);
+        return userMapper.makeUserDto(user);
     }
 
     @Transactional
@@ -72,11 +80,10 @@ public class UserServiceImpl implements UserService {
         user.setName(userDto.getName());
         user.setSurname(userDto.getSurname());
         user.setBirthDate(userDto.getBirthDate());
-        user.setUpdatedAt(LocalDateTime.now());
 
         userRepository.save(user);
 
-        return UserMapper.makeUserDto(user);
+        return userMapper.makeUserDto(user);
     }
 
     @Transactional
@@ -90,7 +97,7 @@ public class UserServiceImpl implements UserService {
 
         userRepository.save(user);
 
-        return UserMapper.makeUserDto(user);
+        return userMapper.makeUserDto(user);
     }
 
     @Transactional
@@ -104,9 +111,10 @@ public class UserServiceImpl implements UserService {
 
         userRepository.save(user);
 
-        return UserMapper.makeUserDto(user);
+        return userMapper.makeUserDto(user);
     }
 
+    @Transactional
     @Override
     @CacheEvict(value = "users", key = "#id")
     public AskDto deleteUser(Long id) {

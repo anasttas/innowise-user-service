@@ -3,12 +3,11 @@ package com.kharlamova.user_service.integration;
 import com.kharlamova.user_service.dto.UserDto;
 import com.kharlamova.user_service.entity.User;
 import com.kharlamova.user_service.repository.UserRepository;
-import net.bytebuddy.utility.dispatcher.JavaDispatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
@@ -24,7 +23,6 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -32,11 +30,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @Testcontainers
 @SpringBootTest
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
 @Transactional
 class UserIntegrationTest {
-
     @Autowired
     private MockMvc mockMvc;
 
@@ -55,11 +52,19 @@ class UserIntegrationTest {
             .withUsername("test")
             .withPassword("test");
 
+    @Container
+    static GenericContainer<?> redis =
+            new GenericContainer<>("redis:8.2.1")
+                    .withExposedPorts(6379);
+
     @DynamicPropertySource
     static void props(DynamicPropertyRegistry r) {
         r.add("spring.datasource.url", postgres::getJdbcUrl);
         r.add("spring.datasource.username", postgres::getUsername);
         r.add("spring.datasource.password", postgres::getPassword);
+
+        r.add("spring.data.redis.host", redis::getHost);
+        r.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
     }
 
     @BeforeEach
@@ -74,9 +79,6 @@ class UserIntegrationTest {
                 .surname("Ivanov")
                 .email("ivan@mail.com")
                 .birthDate(LocalDate.of(2000, 5, 10))
-                .active(true)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
                 .build();
 
         mockMvc.perform(post("/shop/users")

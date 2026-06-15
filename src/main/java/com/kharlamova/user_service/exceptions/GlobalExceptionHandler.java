@@ -13,7 +13,7 @@ import java.util.Map;
 @ControllerAdvice
 public class GlobalExceptionHandler {
     @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleResourceNotFoundException(
+    public ResponseEntity<Map<String, Object>> handleUserNotFoundException(
             UserNotFoundException ex
     ) {
         Map<String, Object> errorDetails = new HashMap<>();
@@ -25,7 +25,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(PaymentCardNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleResourceNotFoundException(
+    public ResponseEntity<Map<String, Object>> handlePaymentCardNotFoundException(
             PaymentCardNotFoundException ex
     ) {
         Map<String, Object> errorDetails = new HashMap<>();
@@ -37,7 +37,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(PaymentCardAlreadyExistsException.class)
-    public ResponseEntity<Map<String, Object>> handleResourceNotFoundException(
+    public ResponseEntity<Map<String, Object>> handlePaymentCardAlreadyExistsException(
             PaymentCardAlreadyExistsException ex
     ) {
         Map<String, Object> errorDetails = new HashMap<>();
@@ -49,7 +49,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(UserAlreadyExistsException.class)
-    public ResponseEntity<Map<String, Object>> handleResourceNotFoundException(
+    public ResponseEntity<Map<String, Object>> handleUserAlreadyExistsException(
             UserAlreadyExistsException ex
     ) {
         Map<String, Object> errorDetails = new HashMap<>();
@@ -61,7 +61,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(CardLimitException.class)
-    public ResponseEntity<Map<String, Object>> handleResourceNotFoundException(
+    public ResponseEntity<Map<String, Object>> handleCardLimitException(
             CardLimitException ex
     ) {
         Map<String, Object> errorDetails = new HashMap<>();

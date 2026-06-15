@@ -1,9 +1,9 @@
 package com.kharlamova.user_service.service;
 
-import com.kharlamova.user_service.dto.AskDto;
 import com.kharlamova.user_service.dto.UserDto;
 import com.kharlamova.user_service.entity.User;
 import com.kharlamova.user_service.exceptions.UserNotFoundException;
+import com.kharlamova.user_service.mapper.UserMapper;
 import com.kharlamova.user_service.repository.UserRepository;
 import com.kharlamova.user_service.service.impl.UserServiceImpl;
 import org.junit.jupiter.api.Test;
@@ -13,7 +13,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,27 +26,32 @@ public class UserServiceTest {
     @InjectMocks
     private UserServiceImpl userService;
 
+    @Mock
+    private UserMapper userMapper;
+
     @Test
     void getUser_shouldReturnUserDto() {
         User user = new User();
-
         user.setId(1L);
         user.setName("Anastasiya");
-        user.setSurname("Vladislavovna");
-        user.setEmail("ananas@gmail.com");
-        user.setBirthDate(LocalDate.of(2000, 1, 1));
-        user.setCreatedAt(LocalDateTime.now());
-        user.setUpdatedAt(LocalDateTime.now());
 
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        UserDto dto = new UserDto();
+        dto.setId(1L);
+        dto.setName("Anastasiya");
+
+        when(userRepository.findById(1L))
+                .thenReturn(Optional.of(user));
+
+        when(userMapper.makeUserDto(user))
+                .thenReturn(dto);
 
         UserDto result = userService.getUser(1L);
 
         assertNotNull(result);
         assertEquals("Anastasiya", result.getName());
 
-        verify(userRepository, times(1))
-                .findById(1L);
+        verify(userRepository).findById(1L);
+        verify(userMapper).makeUserDto(user);
     }
 
     @Test
@@ -67,28 +71,25 @@ public class UserServiceTest {
     @Test
     void createUser_shouldReturnUserDto() {
         UserDto dto = new UserDto();
-        dto.setName("Anastasiya");
-        dto.setSurname("Ivanova");
         dto.setEmail("test@mail.com");
-        dto.setBirthDate(LocalDate.of(2000, 1, 1));
+
+        User user = new User();
+        user.setEmail("test@mail.com");
 
         when(userRepository.findUserByEmail("test@mail.com"))
                 .thenReturn(Optional.empty());
 
-        when(userRepository.save(any(User.class)))
-                .thenAnswer(invocation -> {
-                    User u = invocation.getArgument(0);
-                    u.setId(1L);
-                    return u;
-                });
+        when(userMapper.makeUser(dto))
+                .thenReturn(user);
+
+        when(userMapper.makeUserDto(user))
+                .thenReturn(dto);
 
         UserDto result = userService.createUser(dto);
 
         assertNotNull(result);
-        assertEquals("Anastasiya", result.getName());
 
-        verify(userRepository, times(1))
-                .save(any(User.class));
+        verify(userRepository).save(user);
     }
 
     @Test
@@ -105,6 +106,9 @@ public class UserServiceTest {
         dto.setSurname("Surname");
         dto.setBirthDate(LocalDate.of(2001, 5, 5));
 
+        when(userMapper.makeUserDto(user))
+                .thenReturn(dto);
+
         when(userRepository.findById(1L))
                 .thenReturn(Optional.of(user));
 
@@ -112,6 +116,7 @@ public class UserServiceTest {
                 .thenReturn(user);
 
         UserDto result = userService.updateUser(1L, dto);
+
 
         assertEquals("New", result.getName());
         assertEquals("Surname", result.getSurname());
@@ -127,6 +132,12 @@ public class UserServiceTest {
         user.setId(1L);
         user.setActive(false);
 
+        UserDto dto = new UserDto();
+        dto.setActive(true);
+
+        when(userMapper.makeUserDto(user))
+                .thenReturn(dto);
+
         when(userRepository.findById(1L))
                 .thenReturn(Optional.of(user));
 
@@ -135,7 +146,7 @@ public class UserServiceTest {
 
         UserDto result = userService.activateUser(1L);
 
-        assertTrue(result.isActive());
+        assertTrue(result.getActive());
 
         verify(userRepository, times(1))
                 .save(user);
@@ -148,6 +159,12 @@ public class UserServiceTest {
         user.setId(1L);
         user.setActive(true);
 
+        UserDto dto = new UserDto();
+        dto.setActive(false);
+
+        when(userMapper.makeUserDto(user))
+                .thenReturn(dto);
+
         when(userRepository.findById(1L))
                 .thenReturn(Optional.of(user));
 
@@ -156,7 +173,7 @@ public class UserServiceTest {
 
         UserDto result = userService.deactivateUser(1L);
 
-        assertFalse(result.isActive());
+        assertFalse(result.getActive());
 
         verify(userRepository, times(1))
                 .save(user);

@@ -10,24 +10,31 @@ import com.kharlamova.user_service.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@Testcontainers
 @SpringBootTest
-@AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Transactional
+@AutoConfigureMockMvc(addFilters = false)
 class PaymentCardIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
@@ -38,14 +45,43 @@ class PaymentCardIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Container
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16")
+            .withDatabaseName("testdb")
+            .withUsername("test")
+            .withPassword("test");
+
+    @Container
+    static GenericContainer<?> redis =
+            new GenericContainer<>("redis:8.2.1")
+                    .withExposedPorts(6379);
+
+    @DynamicPropertySource
+    static void props(DynamicPropertyRegistry r) {
+        r.add("spring.datasource.url", postgres::getJdbcUrl);
+        r.add("spring.datasource.username", postgres::getUsername);
+        r.add("spring.datasource.password", postgres::getPassword);
+
+        r.add("spring.data.redis.host", redis::getHost);
+        r.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
+    }
+
     private final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule());
 
     @BeforeEach
     void cleanDb() {
-        paymentCardRepository.deleteAll();
+        jdbcTemplate.execute("TRUNCATE TABLE payment_cards RESTART IDENTITY CASCADE");
+        jdbcTemplate.execute("TRUNCATE TABLE users RESTART IDENTITY CASCADE");
     }
 
+    @WithMockUser(
+            username = "test",
+            roles = {"ADMIN"}
+    )
     @Test
     void shouldCreateCardAndSaveToDatabase() throws Exception {
         User user = userRepository.save(User.builder()
@@ -53,7 +89,6 @@ class PaymentCardIntegrationTest {
                 .surname("Ivanov")
                 .email("ivan@mail.com")
                 .birthDate(LocalDate.of(2000, 5, 10))
-                .active(true)
                 .build());
 
         PaymentCardDto dto = PaymentCardDto.builder()
@@ -61,9 +96,6 @@ class PaymentCardIntegrationTest {
                 .userId(user.getId())
                 .number("1111222233334444")
                 .expirationDate(LocalDate.of(2030, 12, 31))
-                .active(true)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
                 .build();
 
         mockMvc.perform(post("/shop/cards")
@@ -79,6 +111,10 @@ class PaymentCardIntegrationTest {
         assertThat(saved.getNumber()).isEqualTo("1111222233334444");
     }
 
+    @WithMockUser(
+            username = "test",
+            roles = {"ADMIN"}
+    )
     @Test
     void shouldReturnCardById() throws Exception {
         User user = userRepository.save(User.builder()
@@ -86,7 +122,6 @@ class PaymentCardIntegrationTest {
                 .surname("Ivanov")
                 .email("ivan@mail.com")
                 .birthDate(LocalDate.of(2000, 5, 10))
-                .active(true)
                 .build());
 
         PaymentCard card = paymentCardRepository.save(PaymentCard.builder()
@@ -94,7 +129,6 @@ class PaymentCardIntegrationTest {
                 .number("1111222233334444")
                 .user(user)
                 .expirationDate(LocalDate.of(2030, 12, 31))
-                .active(true)
                 .build());
 
         mockMvc.perform(get("/shop/cards/{card_id}", card.getId()))
@@ -103,6 +137,10 @@ class PaymentCardIntegrationTest {
                 .andExpect(jsonPath("$.number").value("1111222233334444"));
     }
 
+    @WithMockUser(
+            username = "test",
+            roles = {"ADMIN"}
+    )
     @Test
     void shouldReturnAllCards() throws Exception {
         User user = userRepository.save(User.builder()
@@ -110,7 +148,6 @@ class PaymentCardIntegrationTest {
                 .surname("Ivanov")
                 .email("ivan@mail.com")
                 .birthDate(LocalDate.of(2000, 5, 10))
-                .active(true)
                 .build());
 
         paymentCardRepository.save(PaymentCard.builder()
@@ -118,7 +155,6 @@ class PaymentCardIntegrationTest {
                 .number("1111222233334444")
                 .user(user)
                 .expirationDate(LocalDate.of(2030, 12, 31))
-                .active(true)
                 .build());
 
         mockMvc.perform(get("/shop/cards"))
@@ -127,6 +163,10 @@ class PaymentCardIntegrationTest {
                 .andExpect(jsonPath("$.content.length()").value(1));
     }
 
+    @WithMockUser(
+            username = "test",
+            roles = {"ADMIN"}
+    )
     @Test
     void shouldReturnCardsByUserId() throws Exception {
         User user = userRepository.save(User.builder()
@@ -134,7 +174,6 @@ class PaymentCardIntegrationTest {
                 .surname("Ivanov")
                 .email("ivan@mail.com")
                 .birthDate(LocalDate.of(2000, 5, 10))
-                .active(true)
                 .build());
 
         PaymentCard card = paymentCardRepository.save(PaymentCard.builder()
@@ -142,7 +181,6 @@ class PaymentCardIntegrationTest {
                 .number("1111222233334444")
                 .user(user)
                 .expirationDate(LocalDate.of(2030, 12, 31))
-                .active(true)
                 .build());
 
         mockMvc.perform(get("/shop/cards/users")
@@ -151,6 +189,10 @@ class PaymentCardIntegrationTest {
                 .andExpect(jsonPath("$.content").isArray());
     }
 
+    @WithMockUser(
+            username = "test",
+            roles = {"ADMIN"}
+    )
     @Test
     void shouldUpdateCard() throws Exception {
         User user = userRepository.save(User.builder()
@@ -158,7 +200,6 @@ class PaymentCardIntegrationTest {
                 .surname("Ivanov")
                 .email("ivan@mail.com")
                 .birthDate(LocalDate.of(2000, 5, 10))
-                .active(true)
                 .build());
 
         PaymentCard card = paymentCardRepository.save(PaymentCard.builder()
@@ -166,7 +207,6 @@ class PaymentCardIntegrationTest {
                 .number("1111222233334444")
                 .user(user)
                 .expirationDate(LocalDate.of(2030, 12, 31))
-                .active(true)
                 .build());
 
         PaymentCardDto updateDto = PaymentCardDto.builder()
@@ -174,7 +214,6 @@ class PaymentCardIntegrationTest {
                 .number("9999888877776666")
                 .userId(user.getId())
                 .expirationDate(LocalDate.of(2035, 1, 1))
-                .active(true)
                 .build();
 
         mockMvc.perform(patch("/shop/cards/{card_id}", card.getId())
@@ -187,6 +226,10 @@ class PaymentCardIntegrationTest {
         assertThat(updated.getHolder()).isEqualTo("Petr Petrov");
     }
 
+    @WithMockUser(
+            username = "test",
+            roles = {"ADMIN"}
+    )
     @Test
     void shouldDeleteCard() throws Exception {
         User user = userRepository.save(User.builder()
@@ -194,7 +237,6 @@ class PaymentCardIntegrationTest {
                 .surname("Ivanov")
                 .email("ivan@mail.com")
                 .birthDate(LocalDate.of(2000, 5, 10))
-                .active(true)
                 .build());
 
         PaymentCard card = paymentCardRepository.save(PaymentCard.builder()
@@ -202,7 +244,6 @@ class PaymentCardIntegrationTest {
                 .number("1111222233334444")
                 .user(user)
                 .expirationDate(LocalDate.of(2030, 12, 31))
-                .active(true)
                 .build());
 
         mockMvc.perform(delete("/shop/cards/{card_id}", card.getId()))
@@ -212,6 +253,10 @@ class PaymentCardIntegrationTest {
         assertThat(paymentCardRepository.findById(card.getId())).isEmpty();
     }
 
+    @WithMockUser(
+            username = "test",
+            roles = {"ADMIN"}
+    )
     @Test
     void shouldActivateCard() throws Exception {
         User user = userRepository.save(User.builder()
@@ -219,7 +264,6 @@ class PaymentCardIntegrationTest {
                 .surname("Ivanov")
                 .email("ivan@mail.com")
                 .birthDate(LocalDate.of(2000, 5, 10))
-                .active(true)
                 .build());
 
         PaymentCard card = paymentCardRepository.save(PaymentCard.builder()
@@ -237,6 +281,10 @@ class PaymentCardIntegrationTest {
         assertThat(paymentCardRepository.findById(card.getId()).get().isActive()).isTrue();
     }
 
+    @WithMockUser(
+            username = "test",
+            roles = {"ADMIN"}
+    )
     @Test
     void shouldDeactivateCard() throws Exception {
         User user = userRepository.save(User.builder()

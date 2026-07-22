@@ -31,7 +31,7 @@ public class UserDto implements Serializable {
     @NotNull(message = "Birth date should not be null")
     private LocalDate birthDate;
 
-    private boolean active;
+    private Boolean active;
 
     private LocalDateTime createdAt;
 

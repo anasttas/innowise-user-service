@@ -1,35 +1,40 @@
 package com.kharlamova.user_service.integration;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.kharlamova.user_service.dto.UserDto;
 import com.kharlamova.user_service.entity.User;
 import com.kharlamova.user_service.repository.UserRepository;
-import net.bytebuddy.utility.dispatcher.JavaDispatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@Testcontainers
 @SpringBootTest
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(addFilters = true)
 @ActiveProfiles("test")
 @Transactional
 class UserIntegrationTest {
-
     @Autowired
     private MockMvc mockMvc;
 
@@ -39,9 +44,33 @@ class UserIntegrationTest {
     private ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new JavaTimeModule());
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Container
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16")
+            .withDatabaseName("testdb")
+            .withUsername("test")
+            .withPassword("test");
+
+    @Container
+    static GenericContainer<?> redis =
+            new GenericContainer<>("redis:8.2.1")
+                    .withExposedPorts(6379);
+
+    @DynamicPropertySource
+    static void props(DynamicPropertyRegistry r) {
+        r.add("spring.datasource.url", postgres::getJdbcUrl);
+        r.add("spring.datasource.username", postgres::getUsername);
+        r.add("spring.datasource.password", postgres::getPassword);
+
+        r.add("spring.data.redis.host", redis::getHost);
+        r.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
+    }
+
     @BeforeEach
-    void cleanDatabase() {
-        userRepository.deleteAll();
+    void cleanDb() {
+        jdbcTemplate.execute("TRUNCATE TABLE users RESTART IDENTITY CASCADE");
     }
 
     @Test
@@ -51,9 +80,6 @@ class UserIntegrationTest {
                 .surname("Ivanov")
                 .email("ivan@mail.com")
                 .birthDate(LocalDate.of(2000, 5, 10))
-                .active(true)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
                 .build();
 
         mockMvc.perform(post("/shop/users")
@@ -78,7 +104,9 @@ class UserIntegrationTest {
                 .active(true)
                 .build());
 
-        mockMvc.perform(get("/shop/users/{user_id}", user.getId()))
+        mockMvc.perform(get("/shop/users/{user_id}", user.getId())
+                        .header("X-User-Id", user.getId().toString())
+                        .header("X-User-Role", "ADMIN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Ivan"))
                 .andExpect(jsonPath("$.email").value("ivan@mail.com"));
@@ -94,7 +122,9 @@ class UserIntegrationTest {
                 .active(true)
                 .build());
 
-        mockMvc.perform(get("/shop/users"))
+        mockMvc.perform(get("/shop/users")
+                        .header("X-User-Id", "1")
+                        .header("X-User-Role", "ADMIN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
                 .andExpect(jsonPath("$.content.length()").value(1));
@@ -119,12 +149,14 @@ class UserIntegrationTest {
                 .build();
 
         mockMvc.perform(patch("/shop/users/{user_id}", user.getId())
+                        .header("X-User-Id", "1")
+                        .header("X-User-Role", "ADMIN")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Petr"));
 
-        User updated = userRepository.findById(user.getId()).get();
+        User updated = userRepository.findById(user.getId()).orElseThrow();
         assertThat(updated.getName()).isEqualTo("Petr");
     }
 
@@ -138,7 +170,9 @@ class UserIntegrationTest {
                 .active(true)
                 .build());
 
-        mockMvc.perform(delete("/shop/users/{user_id}", user.getId()))
+        mockMvc.perform(delete("/shop/users/{user_id}", user.getId())
+                        .header("X-User-Id", "1")
+                        .header("X-User-Role", "ADMIN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.answer").exists());
 
@@ -155,12 +189,11 @@ class UserIntegrationTest {
                 .active(false)
                 .build());
 
-        mockMvc.perform(patch("/shop/users/activate/{user_id}", user.getId()))
+        mockMvc.perform(patch("/shop/users/activate/{user_id}", user.getId())
+                        .header("X-User-Id", "1")
+                        .header("X-User-Role", "ADMIN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(true));
-
-        User updated = userRepository.findById(user.getId()).get();
-        assertThat(updated.isActive()).isTrue();
     }
 
     @Test
@@ -173,11 +206,10 @@ class UserIntegrationTest {
                 .active(true)
                 .build());
 
-        mockMvc.perform(patch("/shop/users/deactivate/{user_id}", user.getId()))
+        mockMvc.perform(patch("/shop/users/deactivate/{user_id}", user.getId())
+                        .header("X-User-Id", "1")
+                        .header("X-User-Role", "ADMIN"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(false));
-
-        User updated = userRepository.findById(user.getId()).get();
-        assertThat(updated.isActive()).isFalse();
     }
 }

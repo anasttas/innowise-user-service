@@ -7,7 +7,6 @@ databaseChangeLog:
             endDelimiter: ;
             sql: |
               insert into users (
-                  id,
                   name,
                   surname,
                   email,
@@ -17,7 +16,6 @@ databaseChangeLog:
                   updated_at
               )
               values (
-                  1,
                   'Anna',
                   'Ivanova',
                   'anna.ivanova@gmail.com',
@@ -28,7 +26,6 @@ databaseChangeLog:
               );
               
               insert into users (
-                  id,
                   name,
                   surname,
                   email,
@@ -38,7 +35,6 @@ databaseChangeLog:
                   updated_at
               )
               values (
-                  2,
                   'Ivan',
                   'Ivanov',
                   'ivan.ivanova@gmail.com',
@@ -47,3 +43,5 @@ databaseChangeLog:
                   now(),
                   now()
               );
+              
+              SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));

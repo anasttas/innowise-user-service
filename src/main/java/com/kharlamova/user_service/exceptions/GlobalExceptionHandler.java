@@ -2,6 +2,8 @@ package com.kharlamova.user_service.exceptions;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -13,7 +15,7 @@ import java.util.Map;
 @ControllerAdvice
 public class GlobalExceptionHandler {
     @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleResourceNotFoundException(
+    public ResponseEntity<Map<String, Object>> handleUserNotFoundException(
             UserNotFoundException ex
     ) {
         Map<String, Object> errorDetails = new HashMap<>();
@@ -25,7 +27,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(PaymentCardNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleResourceNotFoundException(
+    public ResponseEntity<Map<String, Object>> handlePaymentCardNotFoundException(
             PaymentCardNotFoundException ex
     ) {
         Map<String, Object> errorDetails = new HashMap<>();
@@ -37,7 +39,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(PaymentCardAlreadyExistsException.class)
-    public ResponseEntity<Map<String, Object>> handleResourceNotFoundException(
+    public ResponseEntity<Map<String, Object>> handlePaymentCardAlreadyExistsException(
             PaymentCardAlreadyExistsException ex
     ) {
         Map<String, Object> errorDetails = new HashMap<>();
@@ -49,7 +51,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(UserAlreadyExistsException.class)
-    public ResponseEntity<Map<String, Object>> handleResourceNotFoundException(
+    public ResponseEntity<Map<String, Object>> handleUserAlreadyExistsException(
             UserAlreadyExistsException ex
     ) {
         Map<String, Object> errorDetails = new HashMap<>();
@@ -61,7 +63,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(CardLimitException.class)
-    public ResponseEntity<Map<String, Object>> handleResourceNotFoundException(
+    public ResponseEntity<Map<String, Object>> handleCardLimitException(
             CardLimitException ex
     ) {
         Map<String, Object> errorDetails = new HashMap<>();
@@ -70,6 +72,30 @@ public class GlobalExceptionHandler {
         errorDetails.put("status", HttpStatus.BAD_REQUEST.value());
 
         return new ResponseEntity<>(errorDetails, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAuthorizationDeniedException(
+            AuthorizationDeniedException ex
+    ) {
+        Map<String, Object> errorDetails = new HashMap<>();
+        errorDetails.put("timestamp", LocalDateTime.now());
+        errorDetails.put("message", ex.getMessage());
+        errorDetails.put("status", HttpStatus.FORBIDDEN.value());
+
+        return new ResponseEntity<>(errorDetails, HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDeniedException(
+            AccessDeniedException ex
+    ) {
+        Map<String, Object> errorDetails = new HashMap<>();
+        errorDetails.put("timestamp", LocalDateTime.now());
+        errorDetails.put("message", ex.getMessage());
+        errorDetails.put("status", HttpStatus.FORBIDDEN.value());
+
+        return new ResponseEntity<>(errorDetails, HttpStatus.FORBIDDEN);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

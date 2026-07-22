@@ -7,6 +7,7 @@ import com.kharlamova.user_service.exceptions.UserAlreadyExistsException;
 import com.kharlamova.user_service.exceptions.UserNotFoundException;
 import com.kharlamova.user_service.mapper.UserMapper;
 import com.kharlamova.user_service.repository.UserRepository;
+import com.kharlamova.user_service.security.UserPrincipal;
 import com.kharlamova.user_service.service.UserService;
 import com.kharlamova.user_service.specification.UserSpecification;
 import jakarta.transaction.Transactional;
@@ -17,22 +18,42 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-
-import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
 
+    private final UserMapper userMapper;
+
     @Override
     @Cacheable(value = "users", key = "#id")
-    public UserDto getUser(Long id) {
+    public UserDto getUser(Long id, UserPrincipal principal) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        return UserMapper.makeUserDto(user);
+        if (!principal.isAdmin()
+                && !user.getId().equals(principal.getUserId())) {
+            throw new AccessDeniedException("Access denied");
+        }
+
+        return userMapper.makeUserDto(user);
+    }
+
+    @Override
+    @Cacheable(value = "users", key = "#email")
+    public UserDto getUserByEmail(String email, UserPrincipal userPrincipal) {
+        User user = userRepository.findUserByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        if (!userPrincipal.isAdmin()
+                && !user.getId().equals(userPrincipal.getUserId())) {
+            throw new AccessDeniedException("Access denied");
+        }
+
+        return userMapper.makeUserDto(user);
     }
 
     @Override
@@ -42,7 +63,7 @@ public class UserServiceImpl implements UserService {
                 .and(UserSpecification.hasSurnameLike(surname));
 
         return userRepository.findAll(specification, pageable)
-                .map(UserMapper::makeUserDto);
+                .map(userMapper::makeUserDto);
     }
 
     @Override
@@ -52,14 +73,13 @@ public class UserServiceImpl implements UserService {
                 throw new UserAlreadyExistsException("User already exists");
             });
 
-        User user = UserMapper.makeUser(userDto);
+        User user = userMapper.makeUser(userDto);
 
-        user.setCreatedAt(LocalDateTime.now());
-        user.setUpdatedAt(LocalDateTime.now());
+        user.setActive(true);
 
         userRepository.save(user);
 
-        return UserMapper.makeUserDto(user);
+        return userMapper.makeUserDto(user);
     }
 
     @Transactional
@@ -72,11 +92,10 @@ public class UserServiceImpl implements UserService {
         user.setName(userDto.getName());
         user.setSurname(userDto.getSurname());
         user.setBirthDate(userDto.getBirthDate());
-        user.setUpdatedAt(LocalDateTime.now());
 
         userRepository.save(user);
 
-        return UserMapper.makeUserDto(user);
+        return userMapper.makeUserDto(user);
     }
 
     @Transactional
@@ -90,7 +109,7 @@ public class UserServiceImpl implements UserService {
 
         userRepository.save(user);
 
-        return UserMapper.makeUserDto(user);
+        return userMapper.makeUserDto(user);
     }
 
     @Transactional
@@ -104,9 +123,10 @@ public class UserServiceImpl implements UserService {
 
         userRepository.save(user);
 
-        return UserMapper.makeUserDto(user);
+        return userMapper.makeUserDto(user);
     }
 
+    @Transactional
     @Override
     @CacheEvict(value = "users", key = "#id")
     public AskDto deleteUser(Long id) {

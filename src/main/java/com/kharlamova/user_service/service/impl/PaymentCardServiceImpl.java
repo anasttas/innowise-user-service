@@ -23,8 +23,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-
 @Service
 @RequiredArgsConstructor
 public class PaymentCardServiceImpl implements PaymentCardService {
@@ -32,13 +30,15 @@ public class PaymentCardServiceImpl implements PaymentCardService {
 
     private final UserRepository userRepository;
 
+    private final PaymentCardMapper paymentCardMapper;
+
     @Cacheable(value = "cards", key = "#id")
     @Override
     public PaymentCardDto getPaymentCard(Long id) {
         PaymentCard paymentCard = paymentCardRepository.findById(id)
                 .orElseThrow(() -> new PaymentCardNotFoundException("Payment card not found"));
 
-        return PaymentCardMapper.makePaymentCardDto(paymentCard);
+        return paymentCardMapper.makePaymentCardDto(paymentCard);
     }
 
     @Override
@@ -47,7 +47,7 @@ public class PaymentCardServiceImpl implements PaymentCardService {
                 .where(PaymentCardSpecification.hasHolderLike(holder));
 
         return paymentCardRepository.findAll(specification, pageable)
-                .map(PaymentCardMapper::makePaymentCardDto);
+                .map(paymentCardMapper::makePaymentCardDto);
     }
 
     @Override
@@ -64,14 +64,13 @@ public class PaymentCardServiceImpl implements PaymentCardService {
             throw new CardLimitException("User cannot have more than 5 payment cards");
         }
 
-        PaymentCard paymentCard = PaymentCardMapper.makePaymentCard(paymentCardDto, user);
+        PaymentCard paymentCard = paymentCardMapper.makePaymentCard(paymentCardDto, user);
 
-        paymentCard.setCreatedAt(LocalDateTime.now());
-        paymentCard.setUpdatedAt(LocalDateTime.now());
+        paymentCard.setActive(true);
 
         paymentCardRepository.save(paymentCard);
 
-        return PaymentCardMapper.makePaymentCardDto(paymentCard);
+        return paymentCardMapper.makePaymentCardDto(paymentCard);
     }
 
     @Transactional
@@ -87,11 +86,10 @@ public class PaymentCardServiceImpl implements PaymentCardService {
         paymentCard.setHolder(paymentCardDto.getHolder());
         paymentCard.setUser(user);
         paymentCard.setExpirationDate(paymentCardDto.getExpirationDate());
-        paymentCard.setUpdatedAt(LocalDateTime.now());
 
         paymentCardRepository.save(paymentCard);
 
-        return PaymentCardMapper.makePaymentCardDto(paymentCard);
+        return paymentCardMapper.makePaymentCardDto(paymentCard);
     }
 
     @Transactional
@@ -105,7 +103,7 @@ public class PaymentCardServiceImpl implements PaymentCardService {
 
         paymentCardRepository.save(paymentCard);
 
-        return  PaymentCardMapper.makePaymentCardDto(paymentCard);
+        return  paymentCardMapper.makePaymentCardDto(paymentCard);
     }
 
     @Transactional
@@ -119,7 +117,7 @@ public class PaymentCardServiceImpl implements PaymentCardService {
 
         paymentCardRepository.save(paymentCard);
 
-        return  PaymentCardMapper.makePaymentCardDto(paymentCard);
+        return  paymentCardMapper.makePaymentCardDto(paymentCard);
     }
 
     @Transactional
@@ -140,6 +138,6 @@ public class PaymentCardServiceImpl implements PaymentCardService {
                 PaymentCardSpecification.hasUserId(userId);
 
         return paymentCardRepository.findAll(specification, pageable)
-                .map(PaymentCardMapper::makePaymentCardDto);
+                .map(paymentCardMapper::makePaymentCardDto);
     }
 }

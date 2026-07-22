@@ -7,6 +7,7 @@ import com.kharlamova.user_service.exceptions.UserAlreadyExistsException;
 import com.kharlamova.user_service.exceptions.UserNotFoundException;
 import com.kharlamova.user_service.mapper.UserMapper;
 import com.kharlamova.user_service.repository.UserRepository;
+import com.kharlamova.user_service.security.UserPrincipal;
 import com.kharlamova.user_service.service.UserService;
 import com.kharlamova.user_service.specification.UserSpecification;
 import jakarta.transaction.Transactional;
@@ -17,6 +18,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -28,18 +30,28 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Cacheable(value = "users", key = "#id")
-    public UserDto getUser(Long id) {
+    public UserDto getUser(Long id, UserPrincipal principal) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        if (!principal.isAdmin()
+                && !user.getId().equals(principal.getUserId())) {
+            throw new AccessDeniedException("Access denied");
+        }
 
         return userMapper.makeUserDto(user);
     }
 
     @Override
     @Cacheable(value = "users", key = "#email")
-    public UserDto getUserByEmail(String email) {
+    public UserDto getUserByEmail(String email, UserPrincipal userPrincipal) {
         User user = userRepository.findUserByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        if (!userPrincipal.isAdmin()
+                && !user.getId().equals(userPrincipal.getUserId())) {
+            throw new AccessDeniedException("Access denied");
+        }
 
         return userMapper.makeUserDto(user);
     }

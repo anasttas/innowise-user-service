@@ -2,6 +2,7 @@ package com.kharlamova.user_service.controller;
 
 import com.kharlamova.user_service.dto.AskDto;
 import com.kharlamova.user_service.dto.UserDto;
+import com.kharlamova.user_service.security.UserPrincipal;
 import com.kharlamova.user_service.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,16 +20,26 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
     private final UserService userService;
 
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @GetMapping("/{user_id}")
-    public ResponseEntity<UserDto> getUserById(@PathVariable("user_id") Long id) {
-        return ResponseEntity.ok(userService.getUser(id));
+    public ResponseEntity<UserDto> getUserById(@PathVariable("user_id") Long id,
+                                               Authentication authentication
+    ) {
+        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+
+        return ResponseEntity.ok(userService.getUser(id, principal));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN','USER')")
     @GetMapping("/email/{email}")
-    public ResponseEntity<UserDto> getUserByEmail(@PathVariable("email") String email) {
-        return ResponseEntity.ok(userService.getUserByEmail(email));
+    public ResponseEntity<UserDto> getUserByEmail(@PathVariable("email") String email,
+                                                  Authentication authentication) {
+        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+
+        return ResponseEntity.ok(userService.getUserByEmail(email, principal));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<Page<UserDto>> getAllUsers(
             @RequestParam(required = false) String name,
@@ -49,6 +62,7 @@ public class UserController {
                 .body(createdUser);
     }
 
+    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.userId")
     @PatchMapping("/{user_id}")
     public ResponseEntity<UserDto> updateUser(@PathVariable("user_id") Long userId,
                               @RequestBody @Valid UserDto userDto
@@ -60,6 +74,7 @@ public class UserController {
                 .body(updatedUserDto);
     }
 
+    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal.userId")
     @DeleteMapping("/{user_id}")
     public ResponseEntity<AskDto> deleteUser(@PathVariable("user_id") Long userId) {
         AskDto deletedUserDto = userService.deleteUser(userId);
@@ -69,6 +84,7 @@ public class UserController {
                 .body(deletedUserDto);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/activate/{user_id}")
     public ResponseEntity<UserDto> activateUser(@PathVariable("user_id") Long userId) {
         UserDto activatedUserDto = userService.activateUser(userId);
@@ -78,6 +94,7 @@ public class UserController {
                 .body(activatedUserDto);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/deactivate/{user_id}")
     public ResponseEntity<UserDto> deactivateUser(@PathVariable("user_id") Long userId) {
         UserDto deactivatedUserDto = userService.deactivateUser(userId);

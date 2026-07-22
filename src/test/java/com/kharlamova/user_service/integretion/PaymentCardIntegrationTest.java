@@ -14,6 +14,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -27,7 +28,8 @@ import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Testcontainers
 @SpringBootTest
@@ -76,6 +78,10 @@ class PaymentCardIntegrationTest {
         jdbcTemplate.execute("TRUNCATE TABLE users RESTART IDENTITY CASCADE");
     }
 
+    @WithMockUser(
+            username = "test",
+            roles = {"ADMIN"}
+    )
     @Test
     void shouldCreateCardAndSaveToDatabase() throws Exception {
         User user = userRepository.save(User.builder()
@@ -105,6 +111,10 @@ class PaymentCardIntegrationTest {
         assertThat(saved.getNumber()).isEqualTo("1111222233334444");
     }
 
+    @WithMockUser(
+            username = "test",
+            roles = {"ADMIN"}
+    )
     @Test
     void shouldReturnCardById() throws Exception {
         User user = userRepository.save(User.builder()
@@ -127,6 +137,10 @@ class PaymentCardIntegrationTest {
                 .andExpect(jsonPath("$.number").value("1111222233334444"));
     }
 
+    @WithMockUser(
+            username = "test",
+            roles = {"ADMIN"}
+    )
     @Test
     void shouldReturnAllCards() throws Exception {
         User user = userRepository.save(User.builder()
@@ -149,6 +163,10 @@ class PaymentCardIntegrationTest {
                 .andExpect(jsonPath("$.content.length()").value(1));
     }
 
+    @WithMockUser(
+            username = "test",
+            roles = {"ADMIN"}
+    )
     @Test
     void shouldReturnCardsByUserId() throws Exception {
         User user = userRepository.save(User.builder()
@@ -171,6 +189,10 @@ class PaymentCardIntegrationTest {
                 .andExpect(jsonPath("$.content").isArray());
     }
 
+    @WithMockUser(
+            username = "test",
+            roles = {"ADMIN"}
+    )
     @Test
     void shouldUpdateCard() throws Exception {
         User user = userRepository.save(User.builder()
@@ -204,6 +226,10 @@ class PaymentCardIntegrationTest {
         assertThat(updated.getHolder()).isEqualTo("Petr Petrov");
     }
 
+    @WithMockUser(
+            username = "test",
+            roles = {"ADMIN"}
+    )
     @Test
     void shouldDeleteCard() throws Exception {
         User user = userRepository.save(User.builder()
@@ -227,6 +253,10 @@ class PaymentCardIntegrationTest {
         assertThat(paymentCardRepository.findById(card.getId())).isEmpty();
     }
 
+    @WithMockUser(
+            username = "test",
+            roles = {"ADMIN"}
+    )
     @Test
     void shouldActivateCard() throws Exception {
         User user = userRepository.save(User.builder()
@@ -251,6 +281,10 @@ class PaymentCardIntegrationTest {
         assertThat(paymentCardRepository.findById(card.getId()).get().isActive()).isTrue();
     }
 
+    @WithMockUser(
+            username = "test",
+            roles = {"ADMIN"}
+    )
     @Test
     void shouldDeactivateCard() throws Exception {
         User user = userRepository.save(User.builder()

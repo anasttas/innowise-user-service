@@ -5,6 +5,7 @@ import com.kharlamova.user_service.entity.User;
 import com.kharlamova.user_service.exceptions.UserNotFoundException;
 import com.kharlamova.user_service.mapper.UserMapper;
 import com.kharlamova.user_service.repository.UserRepository;
+import com.kharlamova.user_service.security.UserPrincipal;
 import com.kharlamova.user_service.service.impl.UserServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,13 +40,15 @@ public class UserServiceTest {
         dto.setId(1L);
         dto.setName("Anastasiya");
 
+        UserPrincipal principal = new UserPrincipal(1L, "ADMIN");
+
         when(userRepository.findById(1L))
                 .thenReturn(Optional.of(user));
 
         when(userMapper.makeUserDto(user))
                 .thenReturn(dto);
 
-        UserDto result = userService.getUser(1L);
+        UserDto result = userService.getUser(1L, principal);
 
         assertNotNull(result);
         assertEquals("Anastasiya", result.getName());
@@ -56,12 +59,14 @@ public class UserServiceTest {
 
     @Test
     void getUser_shouldThrowException_whenUserNotFound() {
+        UserPrincipal principal = new UserPrincipal(1L, "ADMIN");
+
         when(userRepository.findById(1L))
                 .thenReturn(Optional.empty());
 
         assertThrows(
                 UserNotFoundException.class,
-                () -> userService.getUser(1L)
+                () -> userService.getUser(1L, principal)
         );
 
         verify(userRepository, times(1))
